@@ -13,6 +13,9 @@
 |  dpid原版   | python版  |golang版|
 |  ----  | ----  |----|
 | ![dpid](https://github.com/Mishini/dpid/blob/master/nds.png)  | ![python](https://github.com/Mishini/dpid/blob/master/python.png) |![golang](https://github.com/Mishini/dpid/blob/master/golang.png)|
+
+
+
 放大后可看出区别
 为了方便制作小尺寸头像顺便编译了其他平台的版本，论坛自带的头像处理缩小后太糊了
 
