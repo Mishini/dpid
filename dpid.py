@@ -49,8 +49,8 @@ for py in range(oHeight):
 
         avgF = 0
         
-        for iy in range(syr,eyr-1):
-            for ix in range(sxr,exr-1):
+        for iy in range(syr,eyr):
+            for ix in range(sxr,exr):
                 f=1
                 if(ix < sx):
                     f = f * (1.0 - (sx - ix))
@@ -102,8 +102,8 @@ for py in range(oHeight):
 
         oF = 0
 
-        for iy in range(syr,(eyr-1)):
-            for ix in range(sxr,(exr-1)):
+        for iy in range(syr,(eyr)):
+            for ix in range(sxr,(exr)):
                 if _lambda == 0:
                     f = 1
                 else:

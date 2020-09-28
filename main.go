@@ -89,8 +89,8 @@ func main() {
 
 			avgF := 0.0
 
-			for iy := syr; iy < eyr-1; iy++ {
-				for ix := sxr; ix < exr-1; ix++ {
+			for iy := syr; iy < eyr; iy++ {
+				for ix := sxr; ix < exr; ix++ {
 
 					f := 1.0
 					if ix < sx {
@@ -209,8 +209,8 @@ func main() {
 			exr := math.Ceil(ex)
 			eyr := math.Ceil(ey)
 			oF := 0.0
-			for iy := syr; iy < eyr-1; iy++ {
-				for ix := sxr; ix < exr-1; ix++ {
+			for iy := syr; iy < eyr; iy++ {
+				for ix := sxr; ix < exr; ix++ {
 					var f float64 = 1
 					if _lambda == 0 {
 						f = 1.0
