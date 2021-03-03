@@ -10,12 +10,8 @@
     dpid "myImage.jpg" 0 256        // downscales to 256px height, keeping aspect ratio
     dpid "myImage.jpg" 128 0 0.5    // downscales to 128px width, keeping aspect ratio, using lamdba=0.5
     dpid "myImage.jpg" 128 128      // downscales to 128x128px, ignoring aspect ratio
-|  dpid原版   | python版  |golang版|
+|  org 200x300   | dpid lamdba=0.5  |dpid lamdba=0.8|
 |  ----  | ----  |----|
-| ![dpid](https://github.com/Mishini/dpid/blob/master/nds.png)  | ![python](https://github.com/Mishini/dpid/blob/master/python.png) |![golang](https://github.com/Mishini/dpid/blob/master/golang.png)|
+| ![raw200](https://github.com/Mishini/dpid/blob/master/AuroraTree_Wallace_200.png)  | ![dpid 0.5](https://github.com/Mishini/dpid/blob/master/AuroraTree_Wallace_2048.jpg_200x300_0.5.png) |![dpid 0.8](https://github.com/Mishini/dpid/blob/master/AuroraTree_Wallace_2048.jpg_200x300_0.8.png)|
 
-
-
-放大后可看出区别
-为了方便制作小尺寸头像顺便编译了其他平台的版本，论坛自带的头像处理缩小后太糊了
 
