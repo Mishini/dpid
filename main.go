@@ -17,6 +17,18 @@ import (
 	"github.com/pierrre/imageutil"
 )
 
+func linearize(v float64) float64 {
+	if v <= 0.04045*65535 {
+		return v / 1 / 12.92
+	}
+	return math.Pow((v/1+0.055)/1.055, 2.4)
+}
+func delinearize(v float64) uint32 {
+	if v <= 0.0031308 {
+		return uint32(math.Round(12.92 * v * 1))
+	}
+	return uint32(math.Round((1.055*math.Pow(v, 1.0/2.4) - 0.055) * 1))
+}
 func main() {
 	a := len(os.Args)
 	//imagePath := "Reference.png"
@@ -72,18 +84,25 @@ func main() {
 	outputFilename := fileName + "_" + strconv.FormatInt(int64(oWidth), 10) + "x" + strconv.FormatInt(int64(oHeight), 10) + "_" + strconv.FormatFloat(_lambda, 'f', -1, 32) + ".png"
 	fmt.Println(oWidth, oHeight)
 	fmt.Println(outputFilename)
-	avgImage := make([][][]int, oWidth)
-	for i := range avgImage {
-		avgImage[i] = make([][]int, oHeight)
-		for j := range avgImage[i] {
-			avgImage[i][j] = make([]int, channels)
+	linearRGBImage := make([][][]float64, iWidth)
+	for i := range linearRGBImage {
+		linearRGBImage[i] = make([][]float64, iHeight)
+		for j := range linearRGBImage[i] {
+			linearRGBImage[i][j] = make([]float64, channels)
 		}
 	}
-	oImage := make([][][]int, oWidth)
+	avgImage := make([][][]float64, oWidth)
+	for i := range avgImage {
+		avgImage[i] = make([][]float64, oHeight)
+		for j := range avgImage[i] {
+			avgImage[i][j] = make([]float64, channels)
+		}
+	}
+	oImage := make([][][]float64, oWidth)
 	for i := range oImage {
-		oImage[i] = make([][]int, oHeight)
+		oImage[i] = make([][]float64, oHeight)
 		for j := range oImage[i] {
-			oImage[i][j] = make([]int, channels)
+			oImage[i][j] = make([]float64, channels)
 		}
 	}
 	var pWidth float64 = float64(float64(iWidth) / float64(oWidth))
@@ -91,6 +110,20 @@ func main() {
 
 	//calc average image
 	var wg sync.WaitGroup
+	for py := 0; py < iHeight; py++ {
+		wg.Add(1)
+		go func(py int) {
+			for px := 0; px < iWidth; px++ {
+				var pix [4]uint32
+				pix[0], pix[1], pix[2], pix[3] = imgat(int(px), int(py))
+				linearRGBImage[px][py][0] = linearize(float64(pix[0]))
+				linearRGBImage[px][py][1] = linearize(float64(pix[1]))
+				linearRGBImage[px][py][2] = linearize(float64(pix[2]))
+			}
+			wg.Done()
+		}(py)
+	}
+	wg.Wait()
 	for py := 0; py < oHeight; py++ {
 		wg.Add(1)
 		go func(py int) {
@@ -124,19 +157,19 @@ func main() {
 						if (iy + 1) > ey {
 							f = f * (1.0 - ((iy + 1) - ey))
 						}
-						var pix [4]uint32
+						//var pix [4]uint32
 						//pix[0], pix[1], pix[2], pix[3] = img.At(int(ix), int(iy)).RGBA()
-						pix[0], pix[1], pix[2], pix[3] = imgat(int(ix), int(iy))
+						//pix[0], pix[1], pix[2], pix[3] = imgat(int(ix), int(iy))
 
 						for p := 0; p < channels; p++ {
-							avgImage[px][py][p] = avgImage[px][py][p] + int(float64(pix[p])*f)
+							avgImage[px][py][p] = avgImage[px][py][p] + (linearRGBImage[int(ix)][int(iy)][p] * f)
 						}
 						avgF = avgF + f
 					}
 				}
 
 				for p := 0; p < channels; p++ {
-					avgImage[px][py][p] = int(float64(avgImage[px][py][p]) / avgF)
+					avgImage[px][py][p] = (avgImage[px][py][p] / avgF)
 				}
 
 			}
@@ -149,7 +182,7 @@ func main() {
 	set := imageutil.NewSetFunc(avgOut)
 	for ax := 0; ax < oHeight; ax++ {
 		for ay := 0; ay < oWidth; ay++ {
-			set(ay, ax, uint32(avgImage[ay][ax][0]), uint32(avgImage[ay][ax][1]), uint32(avgImage[ay][ax][2]), 65535)
+			set(ay, ax, uint32(delinearize(avgImage[ay][ax][0])), uint32(delinearize(avgImage[ay][ax][1])), uint32(delinearize(avgImage[ay][ax][2])), 65535)
 		}
 	}
 
@@ -167,7 +200,7 @@ func main() {
 		go func(py int) {
 			for px := 0; px < oWidth; px++ {
 
-				avg := make([]int, channels+1)
+				avg := make([]float64, channels+1)
 				if px > 0 {
 					if py > 0 {
 						avg[0] += avgImage[px-1][py-1][0] * 1
@@ -223,9 +256,9 @@ func main() {
 					}
 				}
 
-				avg[0] = int(float64(avg[0]) / float64(avg[3]))
-				avg[1] = int(float64(avg[1]) / float64(avg[3]))
-				avg[2] = int(float64(avg[2]) / float64(avg[3]))
+				avg[0] = (float64(avg[0]) / float64(avg[3]))
+				avg[1] = (float64(avg[1]) / float64(avg[3]))
+				avg[2] = (float64(avg[2]) / float64(avg[3]))
 				avg = avg[:3]
 
 				sx := math.Max(float64(px)*pWidth, 0)
@@ -256,7 +289,8 @@ func main() {
 								f = mat.Norm(zero, 2)*/
 							//r, g, b, _ := img.At(int(ix), int(iy)).RGBA() //plan a
 							//avg=avgiamge imgat black
-							r, g, b, _ := imgat(int(ix), int(iy))
+							//r, g, b, _ := imgat(int(ix), int(iy))
+							r, g, b := linearRGBImage[int(ix)][int(iy)][0], linearRGBImage[int(ix)][int(iy)][1], linearRGBImage[int(ix)][int(iy)][2]
 							//f = math.Sqrt(float64(math.Pow(float64(avg[0])-float64(r)/0x101, 2) + math.Pow(float64(avg[1])-float64(g)/0x101, 2) + math.Pow(float64(avg[2])-float64(b)/0x101, 2)))
 							f = math.Sqrt((float64(avg[0])-float64(r))*(float64(avg[0])-float64(r)) + (float64(avg[1])-float64(g))*(float64(avg[1])-float64(g)) + (float64(avg[2])-float64(b))*(float64(avg[2])-float64(b)))
 							//err f = math.Sqrt((float64(avg[0])-float64(r|(r<<8)))*(float64(avg[0])-float64(r|(r<<8))) + (float64(avg[1])-float64(g|(g<<8)))*(float64(avg[1])-float64(g|(g<<8))) + (float64(avg[2])-float64(b|(b<<8)))*(float64(avg[2])-float64(b|(b<<8))))
@@ -281,11 +315,12 @@ func main() {
 						}
 
 						oF = oF + f
-						var pix [4]uint32
-						pix[0], pix[1], pix[2], pix[3] = imgat(int(ix), int(iy))
-
+						var pix [3]uint32
+						pix[0] = delinearize(linearRGBImage[int(ix)][int(iy)][0])
+						pix[1] = delinearize(linearRGBImage[int(ix)][int(iy)][1])
+						pix[2] = delinearize(linearRGBImage[int(ix)][int(iy)][2])
 						for p := 0; p < channels; p++ {
-							oImage[px][py][p] = oImage[px][py][p] + int(float64(pix[p])*f)
+							oImage[px][py][p] = oImage[px][py][p] + (float64(pix[p]) * f)
 						}
 					}
 				}
